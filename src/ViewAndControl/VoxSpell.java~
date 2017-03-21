@@ -1,0 +1,247 @@
+package voxspell;
+
+import java.awt.Component;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
+import java.awt.event.MouseAdapter;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileNotFoundException;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
+import java.util.ArrayList;
+import java.util.concurrent.Callable;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+
+import javax.swing.JFrame;
+import javax.swing.JOptionPane;
+import javax.swing.JPanel;
+import javax.swing.SwingUtilities;
+import javax.swing.WindowConstants;
+
+import uk.co.caprica.vlcj.component.EmbeddedMediaPlayerComponent;
+
+
+public class VoxSpell {
+
+	public static void main(String[] args) {
+
+		VoxSpell voxspell = new VoxSpell();
+
+	}
+
+	private boolean _enterAble;
+	private boolean _anyKey;
+	private int _currentState;
+	private MenuPanel _menu;
+	private JFrame _frame;
+	private Process process;
+	private boolean done = true;
+	private ExecutorService es; 
+
+	private boolean _firstQuiz;
+	private int _currentQuizLevel;
+	private QuizPanel _quizPanel;
+	private ReviewPanel _reviewPanel;
+	private int _totalCorrectWords;
+	private int _totalWords;
+	private ResultPanel _resultsPanel;
+
+	
+	private EmbeddedMediaPlayerComponent mediaPlayerComponent;
+
+	
+	public VoxSpell(){
+
+
+
+
+
+		es = Executors.newFixedThreadPool(1);
+		_firstQuiz = true;
+		_menu = new MenuPanel(this);
+
+
+
+
+		_currentState = 0;
+		_frame = new JFrame();
+
+		_frame.setSize(647, 400);
+		_frame.setResizable(false);
+		_frame.setDefaultCloseOperation(WindowConstants.DO_NOTHING_ON_CLOSE);
+		_frame.addWindowListener(new WindowAdapter() {
+			@Override
+			public void windowClosing(WindowEvent e){
+				int res=JOptionPane.showConfirmDialog(null,
+						"Are you sure you want to exit? This could delete some data.");
+
+				if(res==JOptionPane.YES_OPTION){
+					_frame.dispose();
+				}
+			}
+		});
+		final WelcomePanel welcome = new WelcomePanel();
+		welcome.setVisible(true);
+		System.out.println("adding Welcome Panel to Frame");
+		_frame.add(welcome);
+
+	
+		_frame.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyPressed(KeyEvent e) {
+				if(_currentState == 0){
+					System.out.println("Moving to menu");
+					_currentState = 1;
+					_frame.remove(welcome);
+					_frame.add(_menu);
+					_frame.repaint();
+				}
+			}
+		});
+	}
+
+
+
+
+
+	public boolean isFirstQuiz(){
+		boolean result = _firstQuiz;
+		_firstQuiz = false;
+		return result;
+	}
+
+	public void resetFirstQuiz(){
+		_firstQuiz = true;
+	}
+
+	public void addQuizChoicePanel(JPanel old){
+		_frame.remove(old);
+		_frame.add(new QuizChoicePanel(this));
+		_frame.repaint();
+
+	}
+
+
+	public void addQuiz(int level, JPanel old) {
+		_frame.remove(old);
+		_frame.add(new QuizPanel(level, this));
+		_frame.repaint();
+	}
+
+
+	public void addStats() {
+		_frame.remove(_menu);
+		_frame.add(new StatsPanel(this));
+		_frame.repaint();
+		_frame.setVisible(true);
+	}
+
+
+	public void addMenu(JPanel panel) {
+		System.out.println("adding Menu Panel");
+		_frame.remove(panel);
+		_menu = new MenuPanel(this);
+		_frame.add(_menu);
+		_frame.repaint();
+		_frame.setVisible(true);
+	}
+
+	public void addReview(JPanel old) {
+		_frame.remove(old);
+		_frame.add(new ReviewChoicePanel(this));
+		_frame.repaint();
+	}
+
+
+	public void addClear(JPanel panel) {
+		_frame.remove(panel);
+		_frame.add(new ClearPanel(this));
+		_frame.repaint();
+		_frame.setVisible(true);		
+	}
+
+	public void currentQuizLevel(int level) {
+		_currentQuizLevel = level;
+	}
+
+	public void addResult(QuizPanel quizPanel, boolean b, int nextLevel, int mastered, int faulted, int failed) {
+		_frame.add(new ResultPanel(this,b, nextLevel, mastered, faulted, failed));
+		_quizPanel = quizPanel;
+		_frame.repaint();
+	}
+
+	public void removeQuizPanelGoToMenu(ResultPanel _resultsPanel) {
+
+		_frame.remove(_quizPanel);
+		_frame.add(_menu);
+		_frame.setVisible(true);
+		_frame.repaint();
+
+
+	}
+
+	public void RemoveResultGoToNextLevel(ResultPanel _resultsPanel, boolean b) {
+		_frame.remove(_resultsPanel);
+		_frame.remove(_menu);
+		_quizPanel.setVisible(true);
+		_frame.add(_quizPanel);
+		_frame.repaint();
+		if(b){
+			_quizPanel.nextLevel();
+
+		} else {
+			_quizPanel.redoLevel();
+		}
+	}
+
+
+	public void addReviewQuiz(ReviewChoicePanel reviewChoicePanel, int level) {
+		_frame.remove(reviewChoicePanel);
+		_frame.add(new ReviewPanel(level, this));
+		_frame.setVisible(true);
+		_frame.repaint();
+	}
+
+	public void addReviewResult(ReviewPanel old, ArrayList<String>  mastered, ArrayList<String> failed) {
+		_reviewPanel = old;
+		_frame.remove(_reviewPanel);
+		_frame.add(new ReviewResultPanel( mastered, failed, this));
+	}
+
+	public void addReviewQuizChoicePanel(JPanel old) {
+		_frame.remove(old);
+		_frame.add(new ReviewChoicePanel(this));
+		_frame.repaint();
+	}
+
+	public void removeReviewPanelGoToMenu(ResultPanel resultsPanel) {
+		_frame.remove(resultsPanel);
+		_frame.add(_menu);
+		_frame.repaint();
+	}
+
+
+	public void removeMoviePanel(MoviePanel moviePanel){
+		//_frame.remove(moviePanel);
+		_frame.add(_resultsPanel);
+		_frame.repaint();
+	}
+
+
+
+	public void addMoviePanel(ResultPanel resultsPanel) {
+		_resultsPanel = resultsPanel;
+		_resultsPanel = resultsPanel;
+		
+		_frame.remove(_resultsPanel);
+		_frame.add(new MoviePanel());
+		_frame.repaint();
+	}
+
+
+}

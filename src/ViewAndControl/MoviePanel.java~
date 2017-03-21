@@ -1,0 +1,96 @@
+package voxspell;
+
+import java.awt.Canvas;
+import java.awt.Color;
+
+import javax.swing.JFrame;
+import javax.swing.JPanel;
+
+public class MoviePanel extends JPanel {
+	private VoxSpell _vox;
+
+
+    private JPanel panel;
+    private JFrame frame;
+	
+	
+	public MoviePanel(VoxSpell vox){
+		setLayout(null);
+
+		
+	final JButton btnNewButton_1 = new JButton("\t►");
+		btnNewButton_1.addMouseListener(new MouseAdapter() {
+				@Override
+				public void mouseClicked(MouseEvent e) {
+					Status status = _videoPlayer.getStatus();
+					
+					if (status == Status.PLAYING) {
+						_videoPlayer.pause();
+						btnNewButton_1.setText("►");
+					}
+					
+					if (status == Status.PAUSED || status == Status.HALTED || status == Status.STOPPED) {
+						_videoPlayer.play();
+						btnNewButton_1.setText("❚❚");
+					}
+				}
+			});
+		btnNewButton_1.setBounds(95, 361, 56, 35);
+		add(btnNewButton_1);
+		btnNewButton_1.setText("❚❚");
+		
+		final JProgressBar progressBar = new JProgressBar();
+		progressBar.setBounds(6, 339, 636, 20);
+		progressBar.setMaximum((int)_videoPlayer.getTotalDuration().toMillis());
+		add(progressBar);
+
+		
+		
+	
+		JButton btnNewButton_3 = new JButton("\t►►");
+		btnNewButton_3.setBounds(246, 361, 56, 35);
+		btnNewButton_3.addMouseListener(new MouseAdapter() {
+			@Override
+			public void mouseClicked(MouseEvent e) {
+				_videoPlayer.seek(_videoPlayer.getCurrentTime().add(Duration.millis(2000)));
+			}
+		});
+		add(btnNewButton_3);
+		
+		JButton btnGoBackmenu = new JButton("Go back (menu)");
+		btnGoBackmenu.setBounds(479, 366, 156, 25);
+		add(btnGoBackmenu);
+
+		_videoPlayer.setOnError(new Runnable() {
+				public void run() {
+			    System.out.println("Current Error: " + _videoPlayer.getError());
+			  }
+			});
+		
+		_videoPlayer.currentTimeProperty().addListener(new InvalidationListener() {
+			
+			public void invalidated(Observable observable) {
+				progressBar.setValue((int)_videoPlayer.getCurrentTime().toMillis());
+			}
+			
+		});
+	}
+	
+	private Scene makeVideoPlayer() {
+		_media = new Media(Paths.get("hey.mp4").toUri().toString());
+		_videoPlayer = new MediaPlayer(_media);
+		MediaView view = new MediaView(_videoPlayer);
+		Group  root  =  new  Group();
+        Scene  scene  =  new  Scene(root);
+        root.getChildren().add(view);
+        return scene;
+
+	}
+	
+	private void initFX(JFXPanel fxPanel) {
+	    // This method is invoked on JavaFX thread
+	    Scene scene = makeVideoPlayer();
+	    fxPanel.setScene(scene);
+	  }
+
+}
